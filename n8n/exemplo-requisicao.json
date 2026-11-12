@@ -1,0 +1,12 @@
+{
+  "mensagem": "Sinceramente estamos decepcionados. Pagamos o Copilot há meses e o retorno é quase zero. Se não melhorar, não vamos renovar.",
+  "cliente": {
+    "empresa": "Metalúrgica Forte Aço",
+    "plano": "Microsoft 365 E3",
+    "licencas_copilot": 25,
+    "adocao_copilot_pct": 12,
+    "renovacao": "2026-12-20",
+    "nps": 4,
+    "responsavel": "Ana"
+  }
+}

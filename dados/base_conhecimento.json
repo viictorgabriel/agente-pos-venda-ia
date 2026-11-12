@@ -1,0 +1,18 @@
+[
+  {"tema": "adocao", "palavras": ["treinamento", "não sabe", "por onde começar", "ninguém usa", "adoção", "retorno", "boas práticas", "guia"],
+   "conteudo": "Plano de adoção em 3 passos: (1) workshop de 1h por área com 5 casos de uso reais (resumo de reunião no Teams, rascunho de e-mail no Outlook, análise no Excel); (2) campeões internos por área; (3) revisão de uso em 30 dias pelo relatório de uso do Copilot."},
+  {"tema": "reunioes_teams", "palavras": ["reunião", "reuniões", "teams", "resumir", "resumo"],
+   "conteudo": "Para o Copilot resumir reuniões no Teams, a reunião precisa ter transcrição (ou gravação) ativada e o usuário precisa ter licença do Copilot. Diferenças entre usuários costumam vir de licença não atribuída ou política de transcrição desativada para parte da organização."},
+  {"tema": "seguranca", "palavras": ["segurança", "permissão", "privacidade", "dados", "arquivos", "governança", "alunos"],
+   "conteudo": "O Microsoft 365 Copilot respeita as permissões já existentes: só acessa o conteúdo que o próprio usuário já pode ver. Por isso, antes de ampliar o uso, vale revisar compartilhamentos excessivos no SharePoint/OneDrive e rótulos de sensibilidade."},
+  {"tema": "licenciamento", "palavras": ["licença", "licenças", "atribuir", "insuficientes", "liberar", "ampliar", "usuários", "pessoas"],
+   "conteudo": "Licenças são atribuídas no Centro de administração do Microsoft 365 (Cobrança > Licenças). O erro de licenças insuficientes indica que todas as licenças compradas já estão em uso; é preciso liberar uma ou adquirir mais."},
+  {"tema": "relatorios", "palavras": ["relatório", "relatórios", "uso por área", "diretoria", "indicadores"],
+   "conteudo": "O relatório de uso do Copilot fica no Centro de administração do Microsoft 365, em Relatórios > Uso. Para visão por área, cruzar com o departamento do usuário (Entra ID) ou usar o painel do Viva Insights / Copilot Analytics, quando disponível."},
+  {"tema": "suporte_tecnico", "palavras": ["sumiu", "erro", "travando", "não aparece", "problema", "atualização", "outlook", "word"],
+   "conteudo": "Checklist inicial: confirmar licença atribuída ao usuário, sair e entrar na conta do Office, verificar se o Office está em um canal de atualização compatível e atualizado, e testar na versão web. Persistindo, abrir chamado com print do erro e versão do Office."},
+  {"tema": "financeiro", "palavras": ["fatura", "boleto", "segunda via", "cobrança", "valor diferente", "pagamento"],
+   "conteudo": "Questões de fatura e boleto são tratadas pelo financeiro em até 2 dias úteis. Pedir número do contrato e mês de referência."},
+  {"tema": "copilot_studio", "palavras": ["agente", "agentes", "copilot studio", "automatizar", "workshop"],
+   "conteudo": "Copilot Studio permite criar agentes para atendimento interno (RH, TI, políticas) a partir de documentos e conectores. Oferecer workshop de descoberta de casos de uso (2h) como próximo passo."}
+]

@@ -1,0 +1,227 @@
+{
+  "name": "Triagem de pós-venda com Claude",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "triagem-pos-venda",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "id": "a1",
+      "name": "Webhook: nova mensagem",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        0,
+        300
+      ],
+      "webhookId": "triagem-pos-venda"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Monta o pedido para a API da Anthropic a partir do que chegou no webhook.\n// Exemplo de corpo do webhook: { \"mensagem\": \"...\", \"cliente\": { \"empresa\": \"...\", \"renovacao\": \"2026-12-15\", ... } }\nconst SYSTEM = \"Você é um agente de pós-venda de uma revenda de Microsoft 365 e Copilot.\\nSua tarefa é triar cada mensagem de cliente para o time humano agir rápido.\\n\\nComo trabalhar:\\n- Use os dados do CRM enviados junto com a mensagem: renovação próxima,\\n  adoção baixa do Copilot e NPS baixo aumentam a prioridade.\\n- Prioridade alta: risco de perder o cliente, cliente parado em algo urgente,\\n  ou renovação em até 45 dias com sinais de insatisfação.\\n- Se o cliente pedir mais licenças, preencha oportunidade_licencas com o número citado.\\n- A resposta sugerida é um rascunho em português, cordial e curto (até 4 frases).\\n  Não invente prazos, preços ou recursos.\";\nconst SCHEMA = {\"type\": \"object\", \"properties\": {\"categoria\": {\"type\": \"string\", \"enum\": [\"duvida_uso\", \"problema_tecnico\", \"financeiro\", \"renovacao\", \"oportunidade_expansao\", \"risco_churn\"]}, \"prioridade\": {\"type\": \"string\", \"enum\": [\"alta\", \"media\", \"baixa\"]}, \"sentimento\": {\"type\": \"string\", \"enum\": [\"positivo\", \"neutro\", \"negativo\"]}, \"encaminhar_para\": {\"type\": \"string\", \"enum\": [\"suporte\", \"customer_success\", \"comercial\", \"financeiro\"]}, \"resumo\": {\"type\": \"string\", \"description\": \"Resumo da mensagem em 1 frase.\"}, \"sinais_de_risco\": {\"type\": \"array\", \"items\": {\"type\": \"string\"}, \"description\": \"Sinais de risco de churn (pode ser lista vazia).\"}, \"oportunidade_licencas\": {\"type\": \"integer\", \"description\": \"Licenças novas que o cliente sinalizou querer (0 se nenhuma).\"}, \"proxima_acao\": {\"type\": \"string\", \"description\": \"Ação interna recomendada.\"}, \"resposta_sugerida\": {\"type\": \"string\", \"description\": \"Rascunho de resposta ao cliente.\"}, \"follow_up_dias\": {\"type\": \"integer\", \"description\": \"Em quantos dias fazer follow-up.\"}}, \"required\": [\"categoria\", \"prioridade\", \"sentimento\", \"encaminhar_para\", \"resumo\", \"sinais_de_risco\", \"oportunidade_licencas\", \"proxima_acao\", \"resposta_sugerida\", \"follow_up_dias\"], \"additionalProperties\": false};\n\nreturn $input.all().map(item => {\n  const entrada = item.json.body ?? item.json;\n  const pedido = {\n    model: 'claude-opus-5-5',\n    max_tokens: 4000,\n    system: SYSTEM,\n    output_config: { effort: 'low', format: { type: 'json_schema', schema: SCHEMA } },\n    messages: [{\n      role: 'user',\n      content: `Dados do CRM: ${JSON.stringify(entrada.cliente ?? {})}\\nData de hoje: ${new Date().toISOString().slice(0, 10)}\\n\\n<mensagem_do_cliente>\\n${entrada.mensagem}\\n</mensagem_do_cliente>`,\n    }],\n  };\n  return { json: { pedido, entrada } };\n});"
+      },
+      "id": "a2",
+      "name": "Montar pedido",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        220,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.anthropic.com/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "anthropic-version",
+              "value": "2026-10-21"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify($json.pedido) }}",
+        "options": {}
+      },
+      "id": "a3",
+      "name": "Claude: triar mensagem",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        440,
+        300
+      ],
+      "notes": "Crie uma credencial 'Header Auth' com Name = x-api-key e Value = sua chave da Anthropic."
+    },
+    {
+      "parameters": {
+        "jsCode": "// Lê a resposta do Claude: o JSON da triagem vem no bloco de texto.\nreturn $input.all().map((item, i) => {\n  const resposta = item.json;\n  if (resposta.stop_reason === 'refusal') {\n    return { json: { erro: 'O modelo recusou esta mensagem.', entrada: $('Montar pedido').all()[i].json.entrada } };\n  }\n  const texto = (resposta.content || []).find(b => b.type === 'text')?.text ?? '{}';\n  const triagem = JSON.parse(texto);\n  return { json: { ...triagem, entrada: $('Montar pedido').all()[i].json.entrada } };\n});"
+      },
+      "id": "a4",
+      "name": "Ler triagem",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        660,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict"
+          },
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.prioridade }}",
+              "rightValue": "alta",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "id": "a5",
+      "name": "Prioridade alta?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [
+        880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://hooks.slack.com/services/SUBSTITUA/PELO/SEU_WEBHOOK",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ text: `:rotating_light: ${$json.entrada.cliente?.empresa ?? 'Cliente'}: ${$json.resumo}\\nPróxima ação: ${$json.proxima_acao}` }) }}",
+        "options": {}
+      },
+      "id": "a6",
+      "name": "Alertar time no Slack",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        1100,
+        200
+      ],
+      "notes": "Troque a URL por um Incoming Webhook do seu Slack (ou use Teams/e-mail)."
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ JSON.stringify($('Ler triagem').item.json) }}",
+        "options": {}
+      },
+      "id": "a7",
+      "name": "Responder com a triagem",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [
+        1320,
+        300
+      ]
+    }
+  ],
+  "connections": {
+    "Webhook: nova mensagem": {
+      "main": [
+        [
+          {
+            "node": "Montar pedido",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Montar pedido": {
+      "main": [
+        [
+          {
+            "node": "Claude: triar mensagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Claude: triar mensagem": {
+      "main": [
+        [
+          {
+            "node": "Ler triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ler triagem": {
+      "main": [
+        [
+          {
+            "node": "Prioridade alta?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Prioridade alta?": {
+      "main": [
+        [
+          {
+            "node": "Alertar time no Slack",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Responder com a triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Alertar time no Slack": {
+      "main": [
+        [
+          {
+            "node": "Responder com a triagem",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": false
+  }
+}
